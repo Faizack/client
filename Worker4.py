@@ -134,11 +134,11 @@ if __name__ == '__main__':
 
             server_socket_peer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_socket_peer.bind(('localhost', client_port_next))  # Bind to all available network interfaces
-            server_socket_peer.listen(2)
+            server_socket_peer.listen(1)
 
             client_sockets = []
 
-            for i in range(2):
+            for i in range(1):
                 client_socket, addr = server_socket_peer.accept()
                 print("Connection from:", addr)
                 client_sockets.append(client_socket)
@@ -219,7 +219,7 @@ if __name__ == '__main__':
             print("old port {} and new port {}".format(old_client_port_next, client_port_next))
 
 
-            # Sending Model to another cluster model
+            # Receiving Model to another cluster model
 
             C1_peer_ip = next_cluster_headid['address']
             C1_peer_port = next_cluster_headid['cluster_head_port']
@@ -233,7 +233,7 @@ if __name__ == '__main__':
 
                 worker_weights = []
                 received_weights = worker.receive_data(C1_client_socket_peer)
-                print("Receive data from client", idx + 1)
+                print("Receive data from cluster", idx + 1)
                 worker_weights.append(received_weights)
 
                 
@@ -242,8 +242,8 @@ if __name__ == '__main__':
 
                 worker.send_data(C1_client_socket_peer,worker_head_id)
 
-                next_cluster_headid=worker.receive_data(client_socket)
-
+                next_cluster_headid=worker.receive_data(C1_client_socket_peer)
+                print("receive next cluster head",next_cluster_headid)
 
                 worker_weights.append(averaged_weights)
 

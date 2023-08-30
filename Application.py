@@ -142,7 +142,7 @@ class Application:
 
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.bind((HOST, PORT))
-        server_socket.listen(6)  # Allow Six client connections
+        server_socket.listen(4)  # Allow Six client connections
         print("Waiting for connections from clients...")
 
         # Accept connections from two clients
@@ -150,7 +150,7 @@ class Application:
         client_sockets = []
         worker_info_list = []
         # Accept connections from worker clients and store their socket information
-        for i in range(6):
+        for i in range(4):
             client_socket, addr = server_socket.accept()
             print("Connection from:", addr)
             client_sockets.append(client_socket)
@@ -244,7 +244,7 @@ class Application:
             print("suffle_id id ",worker_head_id_1)
 
             try:
-                for idx,client_socket in enumerate(client_sockets[:3]):
+                for idx,client_socket in enumerate(client_sockets[:2]):
                     print("Sending json file to client for Cluster 1:",idx+1)
                     self.send_data(client_socket, file_json_1)
                     self.send_data(client_socket,worker_head_id_1)
@@ -263,7 +263,7 @@ class Application:
                 print("Error sending data",e)
 
             try:
-                for idx,client_socket in enumerate(client_sockets[3:]):
+                for idx,client_socket in enumerate(client_sockets[2:]):
                     print("Sending json file to client for Cluster 2:",idx+1)
                     self.send_data(client_socket, file_json_2)
                     self.send_data(client_socket,worker_head_id_2)
@@ -287,7 +287,7 @@ class Application:
             
             # Receive serialized data f1rom each client
             worker_weights = []
-            for idx, client_socket in enumerate(client_sockets[:3]):
+            for idx, client_socket in enumerate(client_sockets[:2]):
                 unsorted_scores = self.receive_data(client_socket)
                 unsorted_scores = [score[0][0].cpu().item() for score in unsorted_scores]
                 
@@ -308,13 +308,13 @@ class Application:
             
             print("get score matrix:", self.requester.get_score_matrix())
             round_top_k = self.requester.compute_top_k(
-                list(self.worker_address.values())[:3], overall_scores)
+                list(self.worker_address.values())[:2], overall_scores)
             
             penalize = self.requester.find_bad_workers(
-                list(self.worker_address.values())[:3], overall_scores)
+                list(self.worker_address.values())[:2], overall_scores)
             print("penalize :", penalize)
             self.requester.penalize_worker(penalize)
-            self.requester.refund_worker(list(self.worker_address.values())[:3])
+            self.requester.refund_worker(list(self.worker_address.values())[:2])
 
             
             
@@ -323,7 +323,7 @@ class Application:
             self.requester.distribute_rewards()
             print("Distributed rewards for Cluster 1. ")
 
-            for idx, client_socket in enumerate(client_sockets[3:]):
+            for idx, client_socket in enumerate(client_sockets[2:]):
                 unsorted_scores = self.receive_data(client_socket)
                 unsorted_scores = [score[0][0].cpu().item() for score in unsorted_scores]
                 

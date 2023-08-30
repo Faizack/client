@@ -140,11 +140,11 @@ if __name__ == '__main__':
 
             server_socket_peer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_socket_peer.bind(('localhost', client_port_next))  # Bind to all available network interfaces
-            server_socket_peer.listen(2)
+            server_socket_peer.listen(1)
 
             client_sockets = []
 
-            for i in range(2):
+            for i in range(1):
                 client_socket, addr = server_socket_peer.accept()
                 print("Connection from:", addr)
                 client_sockets.append(client_socket)
@@ -153,9 +153,9 @@ if __name__ == '__main__':
 
             worker_weights = []
             for idx, client_socket in enumerate(client_sockets):
-                work_address = worker.receive_data(client_socket)
+                weightss = worker.receive_data(client_socket)
                 print("Receive data from client", idx + 1)
-                worker_weights.append(work_address)
+                worker_weights.append(weightss)
 
             # Assuming you want to store the worker addresses in the worker_dict
             for idx, weight in enumerate(worker_weights):
@@ -190,40 +190,7 @@ if __name__ == '__main__':
 
 
 
-            # Sending Model to another cluster model
-            port_cluster=next_cluster_headid['cluster_head_port']
-            print("cluster port :", port_cluster)
-            server_socket_cluster_peer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            print("Making connection to cluster")
-            server_socket_cluster_peer.bind(('localhost', client_port_next_cluster))  # Bind to all available network interfaces
-            print("Making bind to cluster")
 
-            server_socket_cluster_peer.listen(1)
-            C1_client_socket=[]
-            for i in range(1):
-                
-                client_socket_cluster, addr = server_socket_cluster_peer.accept()
-
-                print("Connection from:", addr)
-                C1_client_socket.append(client_socket_cluster)
-
-            print("Sending weights to CLUSTER:")
-            worker.send_data(client_socket_cluster, averaged_weights)
-
-            
-
-
-            worker_weights = []
-            for idx, client_socket in enumerate(C1_client_socket):
-                work_address = worker.receive_data(client_socket)
-                next_cluster_headid=worker.receive_data(client_socket)
-                print("Receive data from client", idx + 1)
-                worker_weights.append(work_address)
-            
-            
-
-            worker.send_data(C1_client_socket, worker_head_id)
-            worker_weights.append(averaged_weights)
 
 
 
@@ -269,6 +236,42 @@ if __name__ == '__main__':
 
             print("old port {} and new port {}".format(old_client_port_next, client_port_next))
 
+                        # Sending Model to another cluster model
+            port_cluster=next_cluster_headid['cluster_head_port']
+            print("cluster port :", port_cluster)
+            server_socket_cluster_peer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            print("Making connection to cluster")
+            server_socket_cluster_peer.bind(('localhost', client_port_next_cluster))  # Bind to all available network interfaces
+            print("Making bind to cluster")
+
+            server_socket_cluster_peer.listen(1)
+            C1_client_socket=[]
+            for i in range(1):
+                
+                client_socket_cluster, addr = server_socket_cluster_peer.accept()
+
+                print("Connection from:", addr)
+                C1_client_socket.append(client_socket_cluster)
+
+            print("Sending weights to CLUSTER:")
+            worker.send_data(client_socket_cluster, averaged_weights)
+
+            
+
+
+            worker_weights = []
+            for idx, client_socket in enumerate(C1_client_socket):
+                work_address = worker.receive_data(client_socket)
+                next_cluster_headid=worker.receive_data(client_socket)
+                print("Receive data from Cluster peer", idx + 1)
+                worker_weights.append(work_address)
+            
+            worker.send_data(client_socket_cluster, worker_head_id)
+
+            
+
+            worker_weights.append(averaged_weights)
+
 
             print("Connection cluster from:", addr)
 
@@ -287,10 +290,6 @@ if __name__ == '__main__':
 
             except Exception as e:
                 print("Error sending data", e)
-
-
-
-
 
 
             client_sockets = []

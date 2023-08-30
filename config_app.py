@@ -1,3 +1,3 @@
 # Server Port and Ip data
 HOST = 'localhost'
-PORT = 12349
+PORT = 12346

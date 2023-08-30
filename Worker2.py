@@ -20,6 +20,7 @@ import random
 import time
 from Worker_Main import Worker
 from config_app import HOST,PORT
+
 import csv
 
 
@@ -41,6 +42,8 @@ if __name__ == '__main__':
         'locations':locations,
         'cluster_head_port':client_port_next_cluster
     }
+
+
 
     # Reuse the socket address to avoid conflicts when restarting the program
     client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -84,6 +87,7 @@ if __name__ == '__main__':
     next_cluster_headid=worker.receive_data(client_socket)
     print("received next cluster headid : ", next_cluster_headid)
 
+
     # List to store accuracy and loss data for each round
     results = []
     epoch = 0
@@ -126,8 +130,9 @@ if __name__ == '__main__':
 
                 break
 
-        worker_index = received_headid['workerid']
 
+        worker_index = received_headid['workerid']
+        
         is_header = True
         worker_dict = OrderedDict()
         if received_headid['new_port'] == client_port_next:
@@ -135,11 +140,11 @@ if __name__ == '__main__':
 
             server_socket_peer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_socket_peer.bind(('localhost', client_port_next))  # Bind to all available network interfaces
-            server_socket_peer.listen(2)
+            server_socket_peer.listen(1)
 
             client_sockets = []
 
-            for i in range(2):
+            for i in range(1):
                 client_socket, addr = server_socket_peer.accept()
                 print("Connection from:", addr)
                 client_sockets.append(client_socket)
@@ -148,9 +153,9 @@ if __name__ == '__main__':
 
             worker_weights = []
             for idx, client_socket in enumerate(client_sockets):
-                work_address = worker.receive_data(client_socket)
+                weightss = worker.receive_data(client_socket)
                 print("Receive data from client", idx + 1)
-                worker_weights.append(work_address)
+                worker_weights.append(weightss)
 
             # Assuming you want to store the worker addresses in the worker_dict
             for idx, weight in enumerate(worker_weights):
@@ -165,7 +170,7 @@ if __name__ == '__main__':
             worker.update_model(averaged_weights)
             print("Worker Update it works and adding weight to ipfs")
 
-            model_filename = 'save_model/model_index_{}.pt'.format(worker_index)
+            model_filename = 'save_model/model_index_{}.pt'.format(worker_id)
             torch.save(averaged_weights, model_filename)
             print("MODEL SAVE TO LOCAL")
 
@@ -183,8 +188,30 @@ if __name__ == '__main__':
                 client_sockets.pop(idx)
 
 
-            
-            # Now Suffle
+
+
+
+
+
+
+            for idx, weight in enumerate(worker_weights):
+                # The key will be in the format 'worker_1_weights', 'worker_2_weights', and so on
+                key = f'worker_{idx + 1}_weights'
+                # Add the weight to the OrderedDict with the corresponding key
+                worker_dict[key] = weight
+
+            averaged_weights = worker.average(worker_dict)
+            print(" Cluster Averaged weights are Done")
+
+            worker.update_model(averaged_weights)
+
+            print("Worker Update it works and adding weight to ipfs")
+
+            model_filename = 'save_model/model_index_{}.pt'.format(worker_id)
+            torch.save(averaged_weights, model_filename)
+            print("MODEL SAVE TO LOCAL")
+
+                        # Now Suffle
             file_name = 'worker_data.json'
             worker_head_id = worker.shuffle_worker_head(received_json)
             print("shuffle_id id ", worker_head_id)
@@ -194,10 +221,13 @@ if __name__ == '__main__':
 
             if worker_head_id != client_port_next:
                 client_port_next = random.randint(50000, 60000)
+                client_port_next_cluster== random.randint(50000, 60000)
+
                 # Find the dictionary with 'workerid' equal to worker_head_id and update its 'new_port' value
                 for entry in received_json:
                     if entry['workerid'] == worker_id:
                         entry['new_port'] = client_port_next
+                        entry['cluster_head_port']=client_port_next_cluster
                         break
 
             received_headid = worker_head_id
@@ -206,8 +236,7 @@ if __name__ == '__main__':
 
             print("old port {} and new port {}".format(old_client_port_next, client_port_next))
 
-
-            # Sending Model to another cluster model
+                        # Sending Model to another cluster model
             port_cluster=next_cluster_headid['cluster_head_port']
             print("cluster port :", port_cluster)
             server_socket_cluster_peer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -234,32 +263,14 @@ if __name__ == '__main__':
             for idx, client_socket in enumerate(C1_client_socket):
                 work_address = worker.receive_data(client_socket)
                 next_cluster_headid=worker.receive_data(client_socket)
-                print("Receive data from client", idx + 1)
+                print("Receive data from Cluster peer", idx + 1)
                 worker_weights.append(work_address)
             
+            worker.send_data(client_socket_cluster, worker_head_id)
+
             
 
-            worker.send_data(C1_client_socket, worker_head_id)
             worker_weights.append(averaged_weights)
-
-
-
-            for idx, weight in enumerate(worker_weights):
-                # The key will be in the format 'worker_1_weights', 'worker_2_weights', and so on
-                key = f'worker_{idx + 1}_weights'
-                # Add the weight to the OrderedDict with the corresponding key
-                worker_dict[key] = weight
-
-            averaged_weights = worker.average(worker_dict)
-            print(" Cluster Averaged weights are Done")
-
-            worker.update_model(averaged_weights)
-
-            print("Worker Update it works and adding weight to ipfs")
-
-            model_filename = 'save_model/model_index_{}.pt'.format(worker_index)
-            torch.save(averaged_weights, model_filename)
-            print("MODEL SAVE TO LOCAL")
 
 
             print("Connection cluster from:", addr)
@@ -279,10 +290,6 @@ if __name__ == '__main__':
 
             except Exception as e:
                 print("Error sending data", e)
-
-
-
-
 
 
             client_sockets = []
